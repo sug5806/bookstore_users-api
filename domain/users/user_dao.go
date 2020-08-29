@@ -1,47 +1,24 @@
 package users
 
 import (
-	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/sug5806/bookstore_users-api/datasources/mysql/users_db"
-	"github.com/sug5806/bookstore_users-api/utils/date_utils"
 	"github.com/sug5806/bookstore_users-api/utils/errors"
+	"strings"
 )
 
-var (
-	userDB = make(map[int64]*User)
-)
-
-func (user *User) Get() *errors.RestError {
-	if err := users_db.Client.Ping(); err != nil {
-		panic(err)
-	}
-
-	result := userDB[user.Id]
-	if result == nil {
-		return errors.NewNotFoundError(fmt.Sprintf("user %d not found", user.Id))
-	}
-
-	user.Id = result.Id
-	user.FirstName = result.FirstName
-	user.LastName = result.LastName
-	user.Email = result.Email
-	user.DateCreated = result.DateCreated
-
-	return nil
+type User struct {
+	Id          int64  `json:"id"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
+	Email       string `json:"email"`
+	DateCreated string `json:"date_created"`
 }
 
-func (user *User) Save() *errors.RestError {
-	current := userDB[user.Id]
-	if current != nil {
-		if current.Email == user.Email {
-			return errors.NewBadRequestError(fmt.Sprintf("email %s already registered", user.Email))
-		}
-		return errors.NewBadRequestError(fmt.Sprintf("user %d already exists", user.Id))
+func (user *User) Validate() *errors.RestError {
+	user.Email = strings.TrimSpace(strings.ToLower(user.Email))
+
+	if user.Email == "" {
+		return errors.NewBadRequestError("invalid email address")
 	}
 
-	user.DateCreated = date_utils.GetNowString()
-
-	userDB[user.Id] = user
 	return nil
 }
